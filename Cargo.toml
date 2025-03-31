@@ -221,6 +221,7 @@ opentelemetry_sdk = { version = "0.24", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.17.0", features = ["metrics"] }
 rustyline = { version = "12.0.0", features = ["derive"] }
 serde_pack = { version = "1.1.2", package = "rmp-serde" }
+sha2 = "0.10.8"
 tower = { version = "0.4.13", features = ["limit", "load-shed"] }
 tower-http = { version = "0.5.2", features = ["trace", "sensitive-headers", "auth", "request-id", "util", "catch-panic", "cors", "set-header", "limit", "add-extension", "compression-full"] }
 tower-service = "0.3.3"

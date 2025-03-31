@@ -20,6 +20,7 @@ mod sql;
 mod sync;
 mod tracer;
 mod version;
+mod wasm;
 
 use crate::cli::CF;
 use crate::cnf;
@@ -182,6 +183,7 @@ pub async fn init(ds: Arc<Datastore>, ct: CancellationToken) -> Result<(), Error
 		.merge(signup::router())
 		.merge(key::router())
 		.merge(ml::router())
+		.merge(wasm::router())
 		.merge(api::router());
 
 	let axum_app = if ds.get_capabilities().allows_experimental(&ExperimentalTarget::GraphQL) {
