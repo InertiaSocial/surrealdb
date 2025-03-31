@@ -18,7 +18,7 @@ macro_rules! keyword {
 		macro_rules! keyword_t {
 			$(($value) => {
 				$crate::syn::token::Keyword::$name
-			};)*
+			});*
 		}
 	};
 }
@@ -102,6 +102,7 @@ keyword! {
 	Grant => "GRANT",
 	Graphql => "GRAPHQL",
 	Group => "GROUP",
+	Hash => "HASH",
 	Headers => "HEADERS",
 	Highlights => "HIGHLIGHTS",
 	Hnsw => "HNSW",
@@ -199,6 +200,7 @@ keyword! {
 	Token => "TOKEN",
 	To => "TO",
 	Transaction => "TRANSACTION",
+	Wasm => "WASM",
 	True => "true",
 	Type => "TYPE",
 	Unique => "UNIQUE",

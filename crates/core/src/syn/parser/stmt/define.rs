@@ -22,11 +22,12 @@ use crate::{
 			DefineDatabaseStatement, DefineEventStatement, DefineFieldStatement,
 			DefineFunctionStatement, DefineIndexStatement, DefineNamespaceStatement,
 			DefineParamStatement, DefineStatement, DefineTableStatement, DefineUserStatement,
+			DefineWasmStatement,
 		},
 		table_type,
 		tokenizer::Tokenizer,
 		user, AccessType, Ident, Idioms, Index, Kind, Param, Permissions, Scoring, Strand,
-		TableType, Values,
+		TableType, Values, Duration, Idiom,
 	},
 	syn::{
 		parser::{
@@ -65,6 +66,7 @@ impl Parser<'_> {
 			t!("ANALYZER") => self.parse_define_analyzer().map(DefineStatement::Analyzer),
 			t!("ACCESS") => self.parse_define_access(ctx).await.map(DefineStatement::Access),
 			t!("CONFIG") => self.parse_define_config(ctx).await.map(DefineStatement::Config),
+			t!("WASM") => self.parse_define_wasm_statement(ctx).await.map(DefineStatement::Wasm),
 			_ => unexpected!(self, next, "a define statement keyword"),
 		}
 	}
@@ -122,6 +124,50 @@ impl Parser<'_> {
 				t!("CHANGEFEED") => {
 					self.pop_peek();
 					res.changefeed = Some(self.parse_changefeed()?);
+				}
+				_ => break,
+			}
+		}
+
+		Ok(res)
+	}
+
+	pub async fn parse_define_wasm_statement(&mut self, ctx: &mut Stk) -> ParseResult<DefineWasmStatement> {
+		let if_not_exists = if self.eat(t!("IF")) {
+			expected!(self, t!("NOT"));
+			expected!(self, t!("EXISTS"));
+			true
+		} else {
+			false
+		};
+		let name = self.next_token_value()?;
+		let mut res = DefineWasmStatement {
+			name,
+			if_not_exists,
+			..Default::default()
+		};
+
+		loop {
+			match self.peek_kind() {
+				t!("VERSION") => {
+					self.pop_peek();
+					res.version = self.next_token_value::<Strand>()?.0;
+				}
+				t!("HASH") => {
+					self.pop_peek();
+					res.hash = self.next_token_value::<Strand>()?.0;
+				}
+				t!("COMMENT") => {
+					self.pop_peek();
+					res.comment = Some(self.parse_local_idiom(ctx).await?);
+				}
+				t!("PERMISSIONS") => {
+					self.pop_peek();
+					res.perms = ctx.run(|ctx| self.parse_permission_value(ctx)).await?;
+				}
+				t!("TIMEOUT") => {
+					self.pop_peek();
+					res.timeout = Some(self.next_token_value::<Duration>()?);
 				}
 				_ => break,
 			}

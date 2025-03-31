@@ -85,6 +85,8 @@ pub(crate) enum Lookup<'a> {
 	Fc(&'a str, &'a str, &'a str),
 	/// A cache key for a model (on a database)
 	Ml(&'a str, &'a str, &'a str, &'a str),
+	/// A cache key for a wasm module (on a database)
+	Wasm(&'a str, &'a str, &'a str, &'a str),
 	/// A cache key for a config (on a database)
 	Cg(&'a str, &'a str, &'a str),
 	/// A cache key for a parameter (on a database)
@@ -147,6 +149,7 @@ impl Equivalent<Key> for Lookup<'_> {
 			(Self::Az(la, lb, lc), Key::Az(ka, kb, kc)) => la == ka && lb == kb && lc == kc,
 			(Self::Fc(la, lb, lc), Key::Fc(ka, kb, kc)) => la == ka && lb == kb && lc == kc,
 			(Self::Ml(la, lb, lc, ld), Key::Ml(ka, kb, kc, kd)) => la == ka && lb == kb && lc == kc && ld == kd,
+			(Self::Wasm(la, lb, lc, ld), Key::Wasm(ka, kb, kc, kd)) => la == ka && lb == kb && lc == kc && ld == kd,
 			(Self::Cg(la, lb, lc), Key::Cg(ka, kb, kc)) => la == ka && lb == kb && lc == kc,
 			(Self::Pa(la, lb, lc), Key::Pa(ka, kb, kc)) => la == ka && lb == kb && lc == kc,
 			(Self::Tb(la, lb, lc), Key::Tb(ka, kb, kc)) => la == ka && lb == kb && lc == kc,

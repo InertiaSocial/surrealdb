@@ -12,3 +12,16 @@ pub mod ti;
 pub mod ts;
 pub mod us;
 pub mod vs;
+pub mod wasm;
+
+pub fn ml(ns: &str, db: &str) -> Vec<u8> {
+    [&[b'k'], ns.as_bytes(), db.as_bytes(), &[b'y']].concat()
+}
+
+pub fn wasm(ns: &str, db: &str) -> Vec<u8> {
+    [&[b'k'], ns.as_bytes(), db.as_bytes(), &[b'z']].concat()
+}
+
+pub fn api(ns: &str, db: &str) -> Vec<u8> {
+    [&[b'k'], ns.as_bytes(), db.as_bytes(), &[b'a']].concat()
+}

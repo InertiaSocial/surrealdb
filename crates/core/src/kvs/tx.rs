@@ -29,6 +29,7 @@ use crate::sql::statements::DefineNamespaceStatement;
 use crate::sql::statements::DefineParamStatement;
 use crate::sql::statements::DefineTableStatement;
 use crate::sql::statements::DefineUserStatement;
+use crate::sql::statements::DefineWasmStatement;
 use crate::sql::statements::LiveStatement;
 use crate::sql::Id;
 use crate::sql::Permissions;
@@ -40,6 +41,7 @@ use std::fmt::Debug;
 use std::ops::Range;
 use std::sync::Arc;
 use uuid::Uuid;
+use crate::sql::Ident;
 
 #[non_exhaustive]
 pub struct Transaction {
@@ -1272,6 +1274,35 @@ impl Transaction {
 			}
 		}
 	}
+
+	  /// Retrieve a database WASM module definition.
+	  #[instrument(level = "trace", target = "surrealdb::core::kvs::tx", skip_all)]
+	  pub async fn get_db_wasm(
+		  &self,
+		  ns: &str,
+		  db: &str,
+		  name: &str, // Keep as &str for cache lookup key consistency
+		  version: &str,
+	  ) -> Result<Arc<DefineWasmStatement>, Error> {
+		  let qey = cache::tx::Lookup::Wasm(ns, db, name, version); // Use new cache lookup variant
+		  match self.cache.get(&qey) {
+			  Some(val) => val.try_into_type(), // Assuming try_into_type works for Any
+			  None => {
+				  // Convert name: &str to Ident for key generation
+				  let ident_name = Ident::from(name);
+				  let key = crate::key::database::wasm::new(ns, db, &ident_name, version);
+				  let val = self.get(key, None).await?.ok_or_else(|| Error::WasmNotFound {
+					  name: format!("{name}<{version}>"),
+				  })?;
+				  // Deserialize directly from the Val (Bytes)
+				  let val: DefineWasmStatement = revision::from_slice(&val)?;
+				  let val = Arc::new(val);
+				  let entr = cache::tx::Entry::Any(val.clone()); // Use Entry::Any for generic caching
+				  self.cache.insert(qey, entr);
+				  Ok(val)
+			  }
+		  }
+	  }
 
 	/// Retrieve a specific api definition.
 	#[instrument(level = "trace", target = "surrealdb::core::kvs::tx", skip(self))]

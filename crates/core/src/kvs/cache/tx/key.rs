@@ -84,6 +84,8 @@ pub(crate) enum Key {
 	Fc(String, String, String),
 	/// A cache key for a model (on a database)
 	Ml(String, String, String, String),
+	/// A cache key for a wasm module (on a database)
+	Wasm(String, String, String, String),
 	/// A cache key for a config (on a database)
 	Cg(String, String, String),
 	/// A cache key for a parameter (on a database)
@@ -146,6 +148,7 @@ impl<'a> From<Lookup<'a>> for Key {
 			Lookup::Az(a, b, c) => Key::Az(a.to_string(), b.to_string(), c.to_string()),
 			Lookup::Fc(a, b, c) => Key::Fc(a.to_string(), b.to_string(), c.to_string()),
 			Lookup::Ml(a, b, c, d) => Key::Ml(a.to_string(), b.to_string(), c.to_string(), d.to_string()),
+			Lookup::Wasm(a, b, c, d) => Key::Wasm(a.to_string(), b.to_string(), c.to_string(), d.to_string()),
 			Lookup::Cg(a, b, c) => Key::Cg(a.to_string(), b.to_string(), c.to_string()),
 			Lookup::Pa(a, b, c) => Key::Pa(a.to_string(), b.to_string(), c.to_string()),
 			Lookup::Tb(a, b, c) => Key::Tb(a.to_string(), b.to_string(), c.to_string()),

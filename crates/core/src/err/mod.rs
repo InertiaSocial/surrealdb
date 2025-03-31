@@ -1280,6 +1280,14 @@ pub enum Error {
 
 	#[error("File access denied: {0}")]
 	FileAccessDenied(String),
+
+	/// The requested WASM module already exists
+	#[error("The WASM module '{name}' already exists")]
+	WasmAlreadyExists { name: String },
+
+	/// The requested WASM module does not exist
+	#[error("The WASM module '{name}' does not exist")]
+	WasmNotFound { name: String },
 }
 
 impl From<Error> for String {

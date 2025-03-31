@@ -46,6 +46,7 @@ rustls = [
     "tokio-tungstenite?/rustls-tls-webpki-roots",
 ]
 ml = ["surrealdb-core/ml"]
+wasm = ["surrealdb-core/wasm"]
 jwks = ["surrealdb-core/jwks"]
 arbitrary = ["surrealdb-core/arbitrary"]
 allocation-tracking = ["surrealdb-core/allocation-tracking"]

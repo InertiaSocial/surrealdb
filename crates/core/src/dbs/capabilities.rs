@@ -316,6 +316,7 @@ pub enum RouteTarget {
 	Ml,
 	GraphQL,
 	Api,
+	Wasm,
 }
 
 // impl display
@@ -335,6 +336,7 @@ impl fmt::Display for RouteTarget {
 			RouteTarget::Ml => write!(f, "ml"),
 			RouteTarget::GraphQL => write!(f, "graphql"),
 			RouteTarget::Api => write!(f, "api"),
+			RouteTarget::Wasm => write!(f, "wasm"),
 		}
 	}
 }
@@ -359,7 +361,7 @@ impl std::str::FromStr for RouteTarget {
 	type Err = ParseRouteTargetError;
 
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		match s {
+		match_insensitive!(s.trim(), {
 			"health" => Ok(RouteTarget::Health),
 			"export" => Ok(RouteTarget::Export),
 			"import" => Ok(RouteTarget::Import),
@@ -373,8 +375,9 @@ impl std::str::FromStr for RouteTarget {
 			"ml" => Ok(RouteTarget::Ml),
 			"graphql" => Ok(RouteTarget::GraphQL),
 			"api" => Ok(RouteTarget::Api),
+			"wasm" => Ok(RouteTarget::Wasm),
 			_ => Err(ParseRouteTargetError),
-		}
+		})
 	}
 }
 

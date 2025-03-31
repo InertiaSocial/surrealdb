@@ -13,6 +13,7 @@ mod namespace;
 mod param;
 mod table;
 mod user;
+pub mod wasm;
 
 pub use access::DefineAccessStatement;
 pub use analyzer::DefineAnalyzerStatement;
@@ -28,6 +29,7 @@ pub use namespace::DefineNamespaceStatement;
 pub use param::DefineParamStatement;
 pub use table::DefineTableStatement;
 pub use user::DefineUserStatement;
+pub use wasm::DefineWasmStatement;
 
 pub use deprecated::scope::DefineScopeStatement;
 pub use deprecated::token::DefineTokenStatement;
@@ -75,6 +77,7 @@ pub enum DefineStatement {
 	Index(DefineIndexStatement),
 	User(DefineUserStatement),
 	Model(DefineModelStatement),
+	Wasm(DefineWasmStatement),
 	#[revision(start = 2)]
 	Access(DefineAccessStatement),
 	Config(DefineConfigStatement),
@@ -124,6 +127,7 @@ impl DefineStatement {
 			Self::Analyzer(ref v) => v.compute(ctx, opt, doc).await,
 			Self::User(ref v) => v.compute(ctx, opt, doc).await,
 			Self::Model(ref v) => v.compute(ctx, opt, doc).await,
+			Self::Wasm(ref v) => v.compute(ctx, opt, doc).await,
 			Self::Access(ref v) => v.compute(ctx, opt, doc).await,
 			Self::Config(ref v) => v.compute(ctx, opt, doc).await,
 			Self::Api(ref v) => v.compute(stk, ctx, opt, doc).await,
@@ -145,6 +149,7 @@ impl Display for DefineStatement {
 			Self::Index(v) => Display::fmt(v, f),
 			Self::Analyzer(v) => Display::fmt(v, f),
 			Self::Model(v) => Display::fmt(v, f),
+			Self::Wasm(v) => Display::fmt(v, f),
 			Self::Access(v) => Display::fmt(v, f),
 			Self::Config(v) => Display::fmt(v, f),
 			Self::Api(v) => Display::fmt(v, f),
