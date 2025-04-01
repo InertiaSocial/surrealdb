@@ -1,11 +1,12 @@
 use reblessive::Stk;
+use tracing::trace;
 
 use crate::{
-	sql::{Function, Ident, Model, Value},
+	sql::{Function, Ident, Model, Value, Wasm},
 	syn::{
 		error::syntax_error,
 		parser::mac::{expected, expected_whitespace, unexpected},
-		token::{t, TokenKind},
+		token::{t, TokenKind, Glued},
 	},
 };
 
@@ -111,6 +112,60 @@ impl Parser<'_> {
 			version: format!("{}.{}.{}", major, minor, patch),
 			args,
 		})
+	}
+
+	/// Parse a WASM function invocation
+	///
+	/// Expects `wasm` to already be called.
+	pub(super) async fn parse_wasm(&mut self, ctx: &mut Stk) -> ParseResult<Wasm> {
+		expected!(self, t!("::"));
+		let mut name = self.next_token_value::<Ident>()?.0;
+		while self.eat(t!("::")) {
+			name.push_str("::");
+			let part = self.next_token_value::<Ident>()?.0;
+			name.push_str(&part)
+		}
+
+		let start = expected!(self, t!("<")).span;
+
+		// Consume version parts (digits, dots) until '>'
+		let start_version = self.lexer.reader.offset();
+		loop {
+		    let token = self.peek();
+		    match token.kind {
+		        TokenKind::Digits | t!(".") => {
+		            self.next();
+		        }
+		        t!(">") => {
+		            break;
+		        }
+		        _ => {
+		            unexpected!(self, token, "a digit, '.', or '>'")
+		        }
+		    }
+		}
+		let version_span = self.lexer.span_since(start_version);
+		let version = self.lexer.span_str(version_span).to_string();
+
+		// Expect the closing '>'
+		trace!(peek = ?self.peek().kind, "Before expecting closing '>'");
+		self.expect_closing_delimiter(t!(">"), start)?;
+		trace!(peek = ?self.peek().kind, "After consuming closing '>', expecting function name Ident");
+
+		let func = self.next_token_value::<Ident>()?;
+		trace!(?func, "Successfully parsed function name");
+
+		trace!(peek = ?self.peek().kind, "Expecting opening '(' for args");
+		let start_args = expected!(self, t!("(")).span;
+		let args = self.parse_function_args(ctx).await?;
+
+		let result = Wasm {
+			name: name.into(),
+			version,
+			func,
+			args,
+		};
+		Ok(result)
 	}
 }
 

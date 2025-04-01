@@ -1288,6 +1288,14 @@ pub enum Error {
 	/// The requested WASM module does not exist
 	#[error("The WASM module '{name}' does not exist")]
 	WasmNotFound { name: String },
+
+	/// An unexpected ControlFlow variant was encountered during computation
+	#[error("Unexpected control flow state encountered: {0}")]
+	UnexpectedControlFlow(String),
+
+	/// Error during WASM execution
+	#[error("Error during WASM execution: {0}")]
+	WasmExecution(String),
 }
 
 impl From<Error> for String {

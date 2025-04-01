@@ -42,7 +42,7 @@ allocation-tracking = []
 kv-fdb-7_1 = ["foundationdb/fdb-7_1", "kv-fdb"]
 kv-fdb-7_3 = ["foundationdb/fdb-7_3", "kv-fdb"]
 # Enable WASM functionality.
-wasm = []
+wasm = ["dep:wasmtime", "dep:wasmtime-wasi"]
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--cfg", "docsrs"]
@@ -147,6 +147,9 @@ regex-syntax = { workspace = true, optional = true }
 reqwest = { workspace = true, default-features = false, features = ["json", "stream", "multipart"], optional = true }
 tempfile = { workspace = true, optional = true }
 
+# WASM execution dependencies (feature-gated)
+wasmtime = { workspace = true, optional = true }
+wasmtime-wasi = { workspace = true, optional = true }
 
 [dev-dependencies]
 criterion = { workspace = true, features = ["async_tokio"] }

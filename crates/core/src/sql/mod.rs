@@ -72,6 +72,7 @@ pub(crate) mod uuid;
 pub(crate) mod value;
 pub(crate) mod version;
 pub(crate) mod view;
+pub(crate) mod wasm;
 pub(crate) mod with;
 
 pub mod index;
@@ -160,6 +161,7 @@ pub use self::value::Value;
 pub use self::value::Values;
 pub use self::version::Version;
 pub use self::view::View;
+pub use self::wasm::Wasm;
 pub use self::with::With;
 
 // module reexporting parsing function to prevent a breaking change.

@@ -20,6 +20,7 @@ use crate::sql::{
 	Strand, Subquery, Table, Tables, Thing, Uuid,
 };
 use crate::sql::{Closure, ControlFlow, FlowResult};
+use crate::sql::wasm::Wasm; // Added import for Wasm
 use chrono::{DateTime, Utc};
 
 use geo::Point;
@@ -140,6 +141,7 @@ pub enum Value {
 	Closure(Box<Closure>),
 	Refs(Refs),
 	// Add new variants here
+	Wasm(Box<Wasm>), // Renamed WasmFn -> Wasm
 }
 
 impl Value {
@@ -2967,6 +2969,7 @@ impl fmt::Display for Value {
 			Value::Uuid(v) => write!(f, "{v}"),
 			Value::Closure(v) => write!(f, "{v}"),
 			Value::Refs(v) => write!(f, "{v}"),
+			Value::Wasm(v) => write!(f, "{v}"),
 		}
 	}
 }
@@ -3035,6 +3038,14 @@ impl Value {
 			Value::Subquery(v) => return stk.run(|stk| v.compute(stk, ctx, opt, doc)).await,
 			Value::Expression(v) => return stk.run(|stk| v.compute(stk, ctx, opt, doc)).await,
 			Value::Refs(v) => v.compute(ctx, opt, doc).await,
+			Value::Wasm(v) => {
+                // Execute Wasm compute and map potential ControlFlow::Err to Error
+                match v.compute(stk, ctx, opt, doc).await {
+                    Ok(val) => Ok(val),
+                    Err(ControlFlow::Err(e)) => Err(*e), // Map ControlFlow::Err to Error
+                    Err(cf) => Err(Error::UnexpectedControlFlow(format!("{:?}", cf))), // Handle other ControlFlow cases as errors
+                }
+            }
 			_ => Ok(self.to_owned()),
 		};
 
@@ -3183,6 +3194,12 @@ impl TryNeg for Value {
 			Self::Number(n) => Self::Number(n.try_neg()?),
 			v => return Err(Error::TryNeg(v.to_string())),
 		})
+	}
+}
+
+impl From<Wasm> for Value { // Use Wasm
+	fn from(v: Wasm) -> Self { // Use Wasm
+		Value::Wasm(Box::new(v)) // Use Wasm
 	}
 }
 

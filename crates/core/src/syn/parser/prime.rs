@@ -5,7 +5,7 @@ use super::{mac::pop_glued, ParseResult, Parser};
 use crate::{
 	sql::{
 		Array, Closure, Dir, Duration, Function, Geometry, Ident, Idiom, Kind, Mock, Number, Param,
-		Part, Script, Strand, Subquery, Table, Value,
+		Part, Script, Strand, Subquery, Table, Value, Wasm,
 	},
 	syn::{
 		error::bail,
@@ -14,7 +14,7 @@ use crate::{
 			enter_object_recursion, enter_query_recursion,
 			mac::{expected, unexpected},
 		},
-		token::{t, Glued, Span, TokenKind},
+		token::{t, Glued, Span, TokenKind, Keyword},
 	},
 };
 
@@ -24,6 +24,7 @@ impl Parser<'_> {
 	/// What's are values which are more restricted in what expressions they can contain.
 	pub(super) async fn parse_what_primary(&mut self, ctx: &mut Stk) -> ParseResult<Value> {
 		let token = self.peek();
+		trace!(kind = ?token.kind, span = ?token.span, "Entering parse_what_primary, checking token kind");
 		match token.kind {
 			t!("r\"") => {
 				self.pop_peek();
@@ -91,14 +92,33 @@ impl Parser<'_> {
 			}
 			t!("fn") => {
 				self.pop_peek();
-				let value =
-					self.parse_custom_function(ctx).await.map(|x| Value::Function(Box::new(x)))?;
-				Ok(self.try_parse_inline(ctx, &value).await?.unwrap_or(value))
+				let func_result = self.parse_custom_function(ctx).await;
+				let func = func_result?;
+				let base_value = Value::Function(Box::new(func));
+				let inline_result = self.try_parse_inline(ctx, &base_value).await;
+				let maybe_inlined_value = inline_result?;
+				let final_value = maybe_inlined_value.unwrap_or(base_value);
+				Ok(final_value)
 			}
 			t!("ml") => {
 				self.pop_peek();
-				let value = self.parse_model(ctx).await.map(|x| Value::Model(Box::new(x)))?;
-				Ok(self.try_parse_inline(ctx, &value).await?.unwrap_or(value))
+				let model_result = self.parse_model(ctx).await;
+				let model = model_result?;
+				let base_value = Value::Model(Box::new(model));
+				let inline_result = self.try_parse_inline(ctx, &base_value).await;
+				let maybe_inlined_value = inline_result?;
+				let final_value = maybe_inlined_value.unwrap_or(base_value);
+				Ok(final_value)
+			}
+			t!("WASM") => {
+				self.pop_peek();
+				let wasm_result = self.parse_wasm(ctx).await;
+				let wasm = wasm_result?;
+				let base_value = Value::Wasm(Box::new(wasm));
+				let inline_result = self.try_parse_inline(ctx, &base_value).await;
+				let maybe_inlined_value = inline_result?;
+				let final_value = maybe_inlined_value.unwrap_or(base_value);
+				Ok(final_value)
 			}
 			x if Self::kind_is_identifier(x) => {
 				let peek = self.peek1();
@@ -175,6 +195,7 @@ impl Parser<'_> {
 	/// Parse an expressions
 	pub(super) async fn parse_idiom_expression(&mut self, ctx: &mut Stk) -> ParseResult<Value> {
 		let token = self.peek();
+		trace!(kind = ?token.kind, span = ?token.span, "Entering parse_idiom_expression, checking token kind");
 		let value = match token.kind {
 			t!("@") => {
 				self.pop_peek();
@@ -317,6 +338,10 @@ impl Parser<'_> {
 			t!("ml") => {
 				self.pop_peek();
 				self.parse_model(ctx).await.map(|x| Value::Model(Box::new(x)))?
+			}
+			t!("WASM") => {
+				self.pop_peek();
+				self.parse_wasm(ctx).await.map(|x| Value::Wasm(Box::new(x)))?
 			}
 			x if Self::kind_is_identifier(x) => {
 				let peek = self.peek1();

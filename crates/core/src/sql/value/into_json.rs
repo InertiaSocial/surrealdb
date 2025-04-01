@@ -53,6 +53,7 @@ impl From<Value> for serde_json::Value {
 			Value::Expression(expression) => json!(expression),
 			Value::Closure(closure) => json!(closure),
 			Value::Refs(_) => json!(sql::Array::new()),
+			Value::Wasm(wasm) => json!(wasm),
 		}
 	}
 }

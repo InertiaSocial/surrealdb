@@ -51,6 +51,7 @@ impl<'a> KnnConditionRewriter<'a> {
 			| Value::Constant(_)
 			| Value::Closure(_)
 			| Value::Refs(_) => Some(v.clone()),
+			Value::Wasm(w) => Some(Value::Wasm(w.clone())),
 		}
 	}
 
