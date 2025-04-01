@@ -92,33 +92,18 @@ impl Parser<'_> {
 			}
 			t!("fn") => {
 				self.pop_peek();
-				let func_result = self.parse_custom_function(ctx).await;
-				let func = func_result?;
-				let base_value = Value::Function(Box::new(func));
-				let inline_result = self.try_parse_inline(ctx, &base_value).await;
-				let maybe_inlined_value = inline_result?;
-				let final_value = maybe_inlined_value.unwrap_or(base_value);
-				Ok(final_value)
+				let value = self.parse_custom_function(ctx).await.map(|x| Value::Function(Box::new(x)))?;
+				Ok(self.try_parse_inline(ctx, &value).await?.unwrap_or(value))
 			}
 			t!("ml") => {
 				self.pop_peek();
-				let model_result = self.parse_model(ctx).await;
-				let model = model_result?;
-				let base_value = Value::Model(Box::new(model));
-				let inline_result = self.try_parse_inline(ctx, &base_value).await;
-				let maybe_inlined_value = inline_result?;
-				let final_value = maybe_inlined_value.unwrap_or(base_value);
-				Ok(final_value)
+				let value = self.parse_model(ctx).await.map(|x| Value::Model(Box::new(x)))?;
+				Ok(self.try_parse_inline(ctx, &value).await?.unwrap_or(value))
 			}
-			t!("WASM") => {
+			t!("wasm") => {
 				self.pop_peek();
-				let wasm_result = self.parse_wasm(ctx).await;
-				let wasm = wasm_result?;
-				let base_value = Value::Wasm(Box::new(wasm));
-				let inline_result = self.try_parse_inline(ctx, &base_value).await;
-				let maybe_inlined_value = inline_result?;
-				let final_value = maybe_inlined_value.unwrap_or(base_value);
-				Ok(final_value)
+				let value = self.parse_wasm(ctx).await.map(|x| Value::Wasm(Box::new(x)))?;
+				Ok(self.try_parse_inline(ctx, &value).await?.unwrap_or(value))
 			}
 			x if Self::kind_is_identifier(x) => {
 				let peek = self.peek1();
@@ -339,7 +324,7 @@ impl Parser<'_> {
 				self.pop_peek();
 				self.parse_model(ctx).await.map(|x| Value::Model(Box::new(x)))?
 			}
-			t!("WASM") => {
+			t!("wasm") => {
 				self.pop_peek();
 				self.parse_wasm(ctx).await.map(|x| Value::Wasm(Box::new(x)))?
 			}

@@ -39,7 +39,7 @@ pub struct Wasm {
 
 impl fmt::Display for Wasm {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "wasm::{}<{}>::{}(", self.name, self.version, self.func)?;
+        write!(f, "wasm::{}<{}>(", self.name, self.version)?;
         for (idx, p) in self.args.iter().enumerate() {
             if idx != 0 {
                 write!(f, ",")?;

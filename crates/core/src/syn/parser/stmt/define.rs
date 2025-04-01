@@ -66,7 +66,7 @@ impl Parser<'_> {
 			t!("ANALYZER") => self.parse_define_analyzer().map(DefineStatement::Analyzer),
 			t!("ACCESS") => self.parse_define_access(ctx).await.map(DefineStatement::Access),
 			t!("CONFIG") => self.parse_define_config(ctx).await.map(DefineStatement::Config),
-			TokenKind::Keyword(Keyword::WASM) => self.parse_define_wasm_statement(ctx).await.map(DefineStatement::Wasm),
+			TokenKind::Keyword(Keyword::Wasm) => self.parse_define_wasm_statement(ctx).await.map(DefineStatement::Wasm),
 			_ => unexpected!(self, next, "a define statement keyword"),
 		}
 	}

@@ -200,7 +200,7 @@ keyword! {
 	Token => "TOKEN",
 	To => "TO",
 	Transaction => "TRANSACTION",
-	WASM => "WASM",
+	Wasm => "wasm",
 	True => "true",
 	Type => "TYPE",
 	Unique => "UNIQUE",

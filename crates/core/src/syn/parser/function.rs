@@ -122,50 +122,64 @@ impl Parser<'_> {
 		let mut name = self.next_token_value::<Ident>()?.0;
 		while self.eat(t!("::")) {
 			name.push_str("::");
-			let part = self.next_token_value::<Ident>()?.0;
-			name.push_str(&part)
+			name.push_str(&self.next_token_value::<Ident>()?.0)
 		}
-
 		let start = expected!(self, t!("<")).span;
 
-		// Consume version parts (digits, dots) until '>'
-		let start_version = self.lexer.reader.offset();
-		loop {
-		    let token = self.peek();
-		    match token.kind {
-		        TokenKind::Digits | t!(".") => {
-		            self.next();
-		        }
-		        t!(">") => {
-		            break;
-		        }
-		        _ => {
-		            unexpected!(self, token, "a digit, '.', or '>'")
-		        }
-		    }
-		}
-		let version_span = self.lexer.span_since(start_version);
-		let version = self.lexer.span_str(version_span).to_string();
+		let token = self.next();
+		let major: u32 =
+			match token.kind {
+				TokenKind::Digits => self.lexer.span_str(token.span).parse().map_err(
+					|e| syntax_error!("Failed to parse wasm version: {e}", @token.span),
+				)?,
+				_ => unexpected!(self, token, "an integer"),
+			};
 
-		// Expect the closing '>'
-		trace!(peek = ?self.peek().kind, "Before expecting closing '>'");
+		expected_whitespace!(self, t!("."));
+
+		let token = self.next_whitespace();
+		let minor: u32 =
+			match token.kind {
+				TokenKind::Digits => self.lexer.span_str(token.span).parse().map_err(
+					|e| syntax_error!("Failed to parse wasm version: {e}", @token.span),
+				)?,
+				_ => unexpected!(self, token, "an integer"),
+			};
+
+		expected_whitespace!(self, t!("."));
+
+		let token = self.next_whitespace();
+		let patch: u32 =
+			match token.kind {
+				TokenKind::Digits => self.lexer.span_str(token.span).parse().map_err(
+					|e| syntax_error!("Failed to parse wasm version: {e}", @token.span),
+				)?,
+				_ => unexpected!(self, token, "an integer"),
+			};
+
 		self.expect_closing_delimiter(t!(">"), start)?;
-		trace!(peek = ?self.peek().kind, "After consuming closing '>', expecting function name Ident");
 
-		let func = self.next_token_value::<Ident>()?;
-		trace!(?func, "Successfully parsed function name");
+		let start = expected!(self, t!("(")).span;
+		let mut args = Vec::new();
+		loop {
+			if self.eat(t!(")")) {
+				break;
+			}
 
-		trace!(peek = ?self.peek().kind, "Expecting opening '(' for args");
-		let start_args = expected!(self, t!("(")).span;
-		let args = self.parse_function_args(ctx).await?;
+			let arg = ctx.run(|ctx| self.parse_value_inherit(ctx)).await?;
+			args.push(arg);
 
-		let result = Wasm {
-			name: name.into(),
-			version,
-			func,
+			if !self.eat(t!(",")) {
+				self.expect_closing_delimiter(t!(")"), start)?;
+				break;
+			}
+		}
+		Ok(Wasm {
+			name: Ident(name),
+			version: format!("{}.{}.{}", major, minor, patch),
+			func: Ident("main".to_string()),
 			args,
-		};
-		Ok(result)
+		})
 	}
 }
 

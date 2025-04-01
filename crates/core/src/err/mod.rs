@@ -1293,6 +1293,10 @@ pub enum Error {
 	#[error("Unexpected control flow state encountered: {0}")]
 	UnexpectedControlFlow(String),
 
+	/// The WASM feature is not enabled
+	#[error("WASM feature is not enabled")]
+	WasmFeatureNotEnabled,
+	
 	/// Error during WASM execution
 	#[error("Error during WASM execution: {0}")]
 	WasmExecution(String),
