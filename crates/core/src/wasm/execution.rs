@@ -15,14 +15,16 @@ use wasmtime_wasi::{WasiCtxBuilder, WasiView, WasiP1Ctx};
 ///
 /// * `Ok(())` if the execution was successful (for now, doesn't handle return values).
 /// * `Err(Error)` if there was an issue loading, instantiating, or executing the module.
-pub fn execute_wasm_function(wasm_bytes: &[u8], func_name: &str) -> Result<(), Error> {
+pub async fn execute_wasm_function(wasm_bytes: &[u8], func_name: &str) -> Result<(), Error> {
     tracing::info!(
         target: "surrealdb::core::wasm::execution",
         "Attempting to execute WASM function '{}'", func_name
     );
 
     // --- 1. Engine and Store Setup ---
-    let engine = Engine::default();
+    let mut config = Config::default();
+    config.async_support(true);
+    let engine = Engine::new(&config)?;
     let wasi = WasiP1Ctx::new(WasiCtxBuilder::new().inherit_stdio().build());
     let mut store = Store::new(&engine, wasi);
 
@@ -36,12 +38,21 @@ pub fn execute_wasm_function(wasm_bytes: &[u8], func_name: &str) -> Result<(), E
 
     // --- 3. Instantiation ---
     let instance = linker
-        .instantiate(&mut store, &module)
+        .instantiate_async(&mut store, &module)
+        .await
         .map_err(|e| Error::WasmExecution(format!("Failed to instantiate WASM module: {}", e)))?;
 
     // --- 4. Function Retrieval & Execution ---
-    // For WASI P1, the entry point is typically `_start`, but we want to call specific functions.
-    // We need to get the exported function by the name provided.
+    // First call _start to initialize WASI
+    let start = instance
+        .get_func(&mut store, "_start")
+        .ok_or_else(|| Error::WasmExecution("WASI _start function not found".to_string()))?;
+    
+    start.call_async(&mut store, &[], &mut [])
+        .await
+        .map_err(|e| Error::WasmExecution(format!("Failed to call WASI _start: {}", e)))?;
+
+    // Now get and call our target function
     let func = instance
         .get_func(&mut store, func_name)
         .ok_or_else(|| Error::WasmExecution(format!("Function '{}' not found in WASM module", func_name)))?;
@@ -49,7 +60,8 @@ pub fn execute_wasm_function(wasm_bytes: &[u8], func_name: &str) -> Result<(), E
     // --- 5. Function Call (No Args/Return Yet) ---
     // TODO: Handle function arguments and return values based on their types.
     // For now, assume a function with no parameters and no return value.
-    func.call(&mut store, &[], &mut [])
+    func.call_async(&mut store, &[], &mut [])
+        .await
         .map_err(|e| Error::WasmExecution(format!("Failed to call WASM function '{}': {}", func_name, e)))?;
 
     tracing::info!(

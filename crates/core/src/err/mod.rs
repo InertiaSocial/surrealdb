@@ -23,6 +23,7 @@ use std::string::FromUtf8Error;
 use storekey::decode::Error as DecodeError;
 use storekey::encode::Error as EncodeError;
 use thiserror::Error;
+use wasmtime::Error as WasmtimeError;
 
 /// An error originating from an embedded SurrealDB database.
 #[derive(Error, Debug)]
@@ -1501,5 +1502,11 @@ impl Error {
 			},
 			e => e,
 		}
+	}
+}
+
+impl From<WasmtimeError> for Error {
+	fn from(e: WasmtimeError) -> Self {
+		Error::WasmExecution(e.to_string())
 	}
 }

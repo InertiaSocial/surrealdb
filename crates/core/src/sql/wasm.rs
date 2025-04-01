@@ -6,7 +6,7 @@ use crate::sql::value::Value;
 use crate::sql::ControlFlow;
 use crate::sql::FlowResult;
 use crate::sql::Ident;
-
+use futures::TryFutureExt;
 use reblessive::tree::Stk;
 use revision::revisioned;
 use serde::{Deserialize, Serialize};
@@ -84,6 +84,7 @@ impl Wasm {
         // TODO: Implement argument/return value handling
         // For now, just call the function with no args/returns
         crate::wasm::execution::execute_wasm_function(&bytes, &self.func.to_string())
+            .await
             .map_err(ControlFlow::from)?;
 
         Ok(Value::None) // Return None for now
