@@ -16,6 +16,8 @@ use wasmtime_wasi::{WasiCtxBuilder, WasiView, WasiP1Ctx};
 /// * `Ok(())` if the execution was successful (for now, doesn't handle return values).
 /// * `Err(Error)` if there was an issue loading, instantiating, or executing the module.
 pub async fn execute_wasm_function(wasm_bytes: &[u8], func_name: &str) -> Result<(), Error> {
+    let func_name = "hello";
+
     tracing::info!(
         target: "surrealdb::core::wasm::execution",
         "Attempting to execute WASM function '{}'", func_name
@@ -42,15 +44,15 @@ pub async fn execute_wasm_function(wasm_bytes: &[u8], func_name: &str) -> Result
         .await
         .map_err(|e| Error::WasmExecution(format!("Failed to instantiate WASM module: {}", e)))?;
 
-    // --- 4. Function Retrieval & Execution ---
-    // First call _start to initialize WASI
-    let start = instance
-        .get_func(&mut store, "_start")
-        .ok_or_else(|| Error::WasmExecution("WASI _start function not found".to_string()))?;
+    // // --- 4. Function Retrieval & Execution ---
+    // // First call _start to initialize WASI
+    // let start = instance
+    //     .get_func(&mut store, "hello")
+    //     .ok_or_else(|| Error::WasmExecution("WASI hello function not found".to_string()))?;
     
-    start.call_async(&mut store, &[], &mut [])
-        .await
-        .map_err(|e| Error::WasmExecution(format!("Failed to call WASI _start: {}", e)))?;
+    // start.call_async(&mut store, &[], &mut [])
+    //     .await
+    //     .map_err(|e| Error::WasmExecution(format!("Failed to call WASI _start: {}", e)))?;
 
     // Now get and call our target function
     let func = instance
