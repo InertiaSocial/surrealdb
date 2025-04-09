@@ -6,7 +6,7 @@ use crate::{
 	syn::{
 		error::syntax_error,
 		parser::mac::{expected, expected_whitespace, unexpected},
-		token::{t, TokenKind, Glued},
+		token::{t, Glued, TokenKind},
 	},
 };
 
@@ -119,45 +119,46 @@ impl Parser<'_> {
 	/// Expects `wasm` to already be called.
 	pub(super) async fn parse_wasm(&mut self, ctx: &mut Stk) -> ParseResult<Wasm> {
 		expected!(self, t!("::"));
-		let mut name = self.next_token_value::<Ident>()?.0;
-		while self.eat(t!("::")) {
-			name.push_str("::");
-			name.push_str(&self.next_token_value::<Ident>()?.0)
-		}
+		let module_name = self.next_token_value::<Ident>()?.0;
 		let start = expected!(self, t!("<")).span;
-
 		let token = self.next();
-		let major: u32 =
-			match token.kind {
-				TokenKind::Digits => self.lexer.span_str(token.span).parse().map_err(
-					|e| syntax_error!("Failed to parse wasm version: {e}", @token.span),
-				)?,
-				_ => unexpected!(self, token, "an integer"),
-			};
+		let major: u32 = match token.kind {
+			TokenKind::Digits => self
+				.lexer
+				.span_str(token.span)
+				.parse()
+				.map_err(|e| syntax_error!("Failed to parse wasm version: {e}", @token.span))?,
+			_ => unexpected!(self, token, "an integer"),
+		};
 
 		expected_whitespace!(self, t!("."));
 
 		let token = self.next_whitespace();
-		let minor: u32 =
-			match token.kind {
-				TokenKind::Digits => self.lexer.span_str(token.span).parse().map_err(
-					|e| syntax_error!("Failed to parse wasm version: {e}", @token.span),
-				)?,
-				_ => unexpected!(self, token, "an integer"),
-			};
+		let minor: u32 = match token.kind {
+			TokenKind::Digits => self
+				.lexer
+				.span_str(token.span)
+				.parse()
+				.map_err(|e| syntax_error!("Failed to parse wasm version: {e}", @token.span))?,
+			_ => unexpected!(self, token, "an integer"),
+		};
 
 		expected_whitespace!(self, t!("."));
 
 		let token = self.next_whitespace();
-		let patch: u32 =
-			match token.kind {
-				TokenKind::Digits => self.lexer.span_str(token.span).parse().map_err(
-					|e| syntax_error!("Failed to parse wasm version: {e}", @token.span),
-				)?,
-				_ => unexpected!(self, token, "an integer"),
-			};
+		let patch: u32 = match token.kind {
+			TokenKind::Digits => self
+				.lexer
+				.span_str(token.span)
+				.parse()
+				.map_err(|e| syntax_error!("Failed to parse wasm version: {e}", @token.span))?,
+			_ => unexpected!(self, token, "an integer"),
+		};
 
 		self.expect_closing_delimiter(t!(">"), start)?;
+
+		expected!(self, t!("::"));
+		let function_name = self.next_token_value::<Ident>()?.0;
 
 		let start = expected!(self, t!("(")).span;
 		let mut args = Vec::new();
@@ -175,9 +176,9 @@ impl Parser<'_> {
 			}
 		}
 		Ok(Wasm {
-			name: Ident(name),
+			name: Ident(module_name),
 			version: format!("{}.{}.{}", major, minor, patch),
-			func: Ident("main".to_string()),
+			func: Ident(function_name),
 			args,
 		})
 	}

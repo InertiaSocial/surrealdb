@@ -10,6 +10,7 @@ use crate::sql::kind::Literal;
 use crate::sql::range::OldRange;
 use crate::sql::reference::Refs;
 use crate::sql::statements::info::InfoStructure;
+use crate::sql::wasm::Wasm; // Added import for Wasm
 use crate::sql::{
 	array::Uniq,
 	fmt::{Fmt, Pretty},
@@ -20,7 +21,6 @@ use crate::sql::{
 	Strand, Subquery, Table, Tables, Thing, Uuid,
 };
 use crate::sql::{Closure, ControlFlow, FlowResult};
-use crate::sql::wasm::Wasm; // Added import for Wasm
 use chrono::{DateTime, Utc};
 
 use geo::Point;
@@ -3039,13 +3039,13 @@ impl Value {
 			Value::Expression(v) => return stk.run(|stk| v.compute(stk, ctx, opt, doc)).await,
 			Value::Refs(v) => v.compute(ctx, opt, doc).await,
 			Value::Wasm(v) => {
-                // Execute Wasm compute and map potential ControlFlow::Err to Error
-                match v.compute(stk, ctx, opt, doc).await {
-                    Ok(val) => Ok(val),
-                    Err(ControlFlow::Err(e)) => Err(*e), // Map ControlFlow::Err to Error
-                    Err(cf) => Err(Error::UnexpectedControlFlow(format!("{:?}", cf))), // Handle other ControlFlow cases as errors
-                }
-            }
+				// Execute Wasm compute and map potential ControlFlow::Err to Error
+				match v.compute(stk, ctx, opt, doc).await {
+					Ok(val) => Ok(val),
+					Err(ControlFlow::Err(e)) => Err(*e), // Map ControlFlow::Err to Error
+					Err(cf) => Err(Error::UnexpectedControlFlow(format!("{:?}", cf))), // Handle other ControlFlow cases as errors
+				}
+			}
 			_ => Ok(self.to_owned()),
 		};
 
@@ -3197,9 +3197,70 @@ impl TryNeg for Value {
 	}
 }
 
-impl From<Wasm> for Value { // Use Wasm
-	fn from(v: Wasm) -> Self { // Use Wasm
-		Value::Wasm(Box::new(v)) // Use Wasm
+impl From<Wasm> for Value {
+	fn from(v: Wasm) -> Self {
+		Value::Wasm(Box::new(v))
+	}
+}
+
+impl TryInto<wasmtime::component::Val> for Value {
+	type Error = ();
+	fn try_into(self) -> Result<wasmtime::component::Val, Self::Error> {
+		match self {
+			Value::None => Ok(wasmtime::component::Val::Option(None)),
+			Value::Null => Ok(wasmtime::component::Val::Option(None)),
+			Value::Bool(val) => Ok(wasmtime::component::Val::Bool(val)),
+			Value::Number(number) => match number {
+				Number::Int(i) => Ok(wasmtime::component::Val::S64(i)),
+				Number::Float(f) => Ok(wasmtime::component::Val::Float64(f)),
+				Number::Decimal(d) => Ok(wasmtime::component::Val::Float64(d.to_f64().unwrap())),
+			},
+			Value::Strand(strand) => Ok(wasmtime::component::Val::String(strand.to_string())),
+			Value::Duration(duration) => {
+				Ok(wasmtime::component::Val::U64(duration.as_millis() as u64))
+			}
+			Value::Datetime(datetime) => {
+				Ok(wasmtime::component::Val::U64(datetime.timestamp_millis() as u64))
+			}
+			Value::Uuid(uuid) => Ok(wasmtime::component::Val::String(uuid.to_string())),
+			Value::Array(array) => Ok(wasmtime::component::Val::String(format!("{:?}", array))),
+			Value::Object(object) => Ok(wasmtime::component::Val::String(format!("{:?}", object))),
+			Value::Geometry(geometry) => {
+				Ok(wasmtime::component::Val::String(format!("{:?}", geometry)))
+			}
+			Value::Bytes(bytes) => Ok(wasmtime::component::Val::List(
+				bytes.0.clone().into_iter().map(|b| wasmtime::component::Val::U8(b)).collect(),
+			)),
+			_ => Err(()),
+		}
+	}
+}
+
+//
+impl TryFrom<wasmtime::component::Val> for Value {
+	type Error = ();
+	fn try_from(value: wasmtime::component::Val) -> Result<Self, Self::Error> {
+		match value {
+			wasmtime::component::Val::Bool(b) => Ok(Value::Bool(b)),
+			wasmtime::component::Val::S8(i) => Ok(Value::Number(Number::Int(i as i64))),
+			wasmtime::component::Val::U8(i) => Ok(Value::Number(Number::Int(i as i64))),
+			wasmtime::component::Val::S16(i) => Ok(Value::Number(Number::Int(i as i64))),
+			wasmtime::component::Val::U16(i) => Ok(Value::Number(Number::Int(i as i64))),
+			wasmtime::component::Val::S32(i) => Ok(Value::Number(Number::Int(i as i64))),
+			wasmtime::component::Val::U32(i) => Ok(Value::Number(Number::Int(i as i64))),
+			wasmtime::component::Val::S64(i) => Ok(Value::Number(Number::Int(i as i64))),
+			wasmtime::component::Val::U64(_i) => Err(()), // No way to have Number::Uint
+			wasmtime::component::Val::Float32(f) => Ok(Value::Number(Number::Float(f as f64))),
+			wasmtime::component::Val::Float64(f) => Ok(Value::Number(Number::Float(f))),
+			wasmtime::component::Val::Char(f) => Ok(Value::Strand(Strand(f.to_string()))),
+			wasmtime::component::Val::String(s) => Ok(s.into()),
+			wasmtime::component::Val::List(vals) => {
+				let initial_vals: Vec<Value> =
+					vals.iter().map(|v| Value::try_from(v.clone()).unwrap()).collect();
+				Ok(Value::Array(Array::from(initial_vals)))
+			}
+			_ => Err(()),
+		}
 	}
 }
 
