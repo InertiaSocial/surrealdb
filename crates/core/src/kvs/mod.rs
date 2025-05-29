@@ -32,6 +32,7 @@ mod version;
 
 mod fdb;
 mod indxdb;
+mod mdbx;
 mod mem;
 mod rocksdb;
 mod surrealkv;

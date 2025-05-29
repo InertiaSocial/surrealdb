@@ -22,6 +22,7 @@ pub(crate) fn path_valid(v: &str) -> Result<String, String> {
 		v if v.starts_with("surrealkv+versioned:") => Ok(v.to_string()),
 		v if v.starts_with("tikv:") => Ok(v.to_string()),
 		v if v.starts_with("fdb:") => Ok(v.to_string()),
+		v if v.starts_with("mdbx:") => Ok(v.to_string()),
 		_ => Err(String::from("Provide a valid database path parameter")),
 	}
 }

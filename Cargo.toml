@@ -6,7 +6,7 @@ authors = ["Tobie Morgan Hitchcock <tobie@surrealdb.com>"]
 edition = "2021"
 license-file = "LICENSE"
 publish = false
-version = "3.0.0"
+version = "2.0.0"
 rust-version = "1.84.0"
 description = "A scalable, distributed, collaborative, document-graph database, for the realtime web"
 repository = "https://github.com/surrealdb/surrealdb"
@@ -22,8 +22,8 @@ categories = ["database-implementations", "data-structures", "embedded"]
 
 [workspace.dependencies]
 # workspace internal dependencies
-surrealdb = { version = "=3.0.0", package = "surrealdb", path = "./crates/sdk" }
-surrealdb-core = { version = "=3.0.0", package = "surrealdb-core", path = "./crates/core", default-features = false }
+surrealdb = { version = "=2.0.0", package = "surrealdb", path = "./crates/sdk" }
+surrealdb-core = { version = "=2.0.0", package = "surrealdb-core", path = "./crates/core", default-features = false }
 
 # External surreal crates
 affinitypool = { version = "0.3.1" }
@@ -53,6 +53,8 @@ foundationdb = { version = "0.9.0", default-features = false, features = [
 rocksdb = { version = "0.23.0", features = ["lz4", "snappy"] }
 # Managed by surreal but mostly external code
 tikv = { version = "0.3.0-surreal.1", default-features = false, package = "surrealdb-tikv-client" }
+libmdbx = { git = "https://github.com/vorot93/libmdbx-rs.git" }
+
 
 # Other crates
 addr = { version = "0.15.6", default-features = false, features = ["std"] }
@@ -188,6 +190,7 @@ default = [
     "storage-mem",
     "storage-surrealkv",
     "storage-rocksdb",
+    "storage-mdbx",
     "scripting",
     "http",
 ]
@@ -202,6 +205,7 @@ storage-indxdb = ["surrealdb/kv-indxdb"]
 storage-rocksdb = ["surrealdb/kv-rocksdb"]
 storage-surrealkv = ["surrealdb/kv-surrealkv"]
 storage-tikv = ["surrealdb/kv-tikv"]
+storage-mdbx = ["surrealdb/kv-mdbx"]
 # FoundationDB features
 storage-fdb-7_1 = ["surrealdb/kv-fdb-7_1"]
 storage-fdb-7_3 = ["surrealdb/kv-fdb-7_3"]

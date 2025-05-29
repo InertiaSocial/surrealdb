@@ -32,6 +32,7 @@ kv-rocksdb = [
     "dep:ext-sort",
     "dep:affinitypool",
 ]
+kv-mdbx = ["dep:libmdbx"]
 kv-tikv = ["dep:tikv", "tokio/time", "dep:tempfile", "dep:ext-sort"]
 kv-fdb = ["dep:foundationdb", "tokio/time", "dep:tempfile", "dep:ext-sort"]
 kv-surrealkv = [
@@ -104,6 +105,7 @@ vart.workspace = true
 foundationdb = { workspace = true, optional = true }
 rocksdb = { workspace = true, optional = true }
 tikv = { workspace = true, optional = true }
+libmdbx = { workspace = true, optional = true }
 
 # Other crates
 addr.workspace = true

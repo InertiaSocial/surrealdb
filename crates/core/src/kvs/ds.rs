@@ -27,6 +27,7 @@ use crate::kvs::clock::SystemClock;
 use crate::kvs::index::IndexBuilder;
 use crate::kvs::sequences::Sequences;
 use crate::kvs::{LockType, LockType::*, TransactionType, TransactionType::*};
+use crate::kvs::tr::Check;
 use crate::sql::FlowResultExt as _;
 use crate::sql::{statements::DefineUserStatement, Base, Query, Value};
 use crate::syn;
@@ -129,7 +130,7 @@ impl TransactionFactory {
 			Optimistic => false,
 		};
 		// Create a new transaction on the datastore
-		let (inner, local, reverse_scan) = match self.flavor.as_ref() {
+		let (inner, local, reverse_scan): (Box<dyn crate::kvs::api::Transaction + Send>, bool, bool) = match self.flavor.as_ref() {
 			#[cfg(feature = "kv-mem")]
 			DatastoreFlavor::Mem(v) => {
 				let tx = v.transaction(write, lock).await?;
@@ -160,6 +161,11 @@ impl TransactionFactory {
 				let tx = v.transaction(write, lock).await?;
 				(tx, true, false)
 			}
+			#[cfg(feature = "kv-mdbx")]
+			DatastoreFlavor::Mdbx(v) => {
+				let tx = v.transaction(write, Check::Warn).await?;
+				(tx, false, false)
+			}
 			_ => unreachable!(),
 		};
 		Ok(Transaction::new(
@@ -187,6 +193,8 @@ pub(super) enum DatastoreFlavor {
 	FoundationDB(super::fdb::Datastore),
 	#[cfg(feature = "kv-surrealkv")]
 	SurrealKV(super::surrealkv::Datastore),
+	#[cfg(feature = "kv-mdbx")]
+	Mdbx(super::mdbx::Datastore),
 }
 
 impl fmt::Display for Datastore {
@@ -205,6 +213,8 @@ impl fmt::Display for Datastore {
 			DatastoreFlavor::FoundationDB(_) => write!(f, "fdb"),
 			#[cfg(feature = "kv-surrealkv")]
 			DatastoreFlavor::SurrealKV(_) => write!(f, "surrealkv"),
+			#[cfg(feature = "kv-mdbx")]
+			DatastoreFlavor::Mdbx(_) => write!(f, "mdbx"),
 			#[allow(unreachable_patterns)]
 			_ => unreachable!(),
 		}
@@ -360,6 +370,21 @@ impl Datastore {
 				}
 				#[cfg(not(feature = "kv-tikv"))]
                 return Err(Error::Ds("Cannot connect to the `tikv` storage engine as it is not enabled in this build of SurrealDB".to_owned()));
+			}
+			// Parse and initiate an MDBX datastore
+			s if s.starts_with("mdbx:") => {
+				#[cfg(feature = "kv-mdbx")]
+				{
+					info!(target: TARGET, "Starting kvs store at {}", path);
+					let s = s.trim_start_matches("mdbx://");
+					let s = s.trim_start_matches("mdbx:");
+					let v = super::mdbx::Datastore::new(s).await.map(DatastoreFlavor::Mdbx);
+					let c = clock.unwrap_or_else(|| Arc::new(SizedClock::system()));
+					info!(target: TARGET, "Started kvs store at {}", path);
+					Ok((v, c))
+				}
+				#[cfg(not(feature = "kv-mdbx"))]
+                return Err(Error::Ds("Cannot connect to the `mdbx` storage engine as it is not enabled in this build of SurrealDB".to_owned()));
 			}
 			// Parse and initiate a FoundationDB datastore
 			s if s.starts_with("fdb:") => {
@@ -738,6 +763,8 @@ impl Datastore {
 			DatastoreFlavor::FoundationDB(v) => v.shutdown().await,
 			#[cfg(feature = "kv-surrealkv")]
 			DatastoreFlavor::SurrealKV(v) => v.shutdown().await,
+			#[cfg(feature = "kv-mdbx")]
+			DatastoreFlavor::Mdbx(v) => v.shutdown().await,
 			#[allow(unreachable_patterns)]
 			_ => unreachable!(),
 		}
